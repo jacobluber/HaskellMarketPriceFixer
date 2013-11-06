@@ -1,5 +1,5 @@
 module Main where
---Haskell Market Price Fixer
+--Haskell Market Price Fixer for Functional
 
 
 main::IO()
