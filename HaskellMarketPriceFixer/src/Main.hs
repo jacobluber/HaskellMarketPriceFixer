@@ -1,5 +1,5 @@
 module Main where
---Haskell Market Price Fixer for Functional Programming Class
+--Haskell Market Price Fixer for Functional Programming Class test
 
 
 main::IO()
