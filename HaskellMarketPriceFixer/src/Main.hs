@@ -6,13 +6,18 @@ data Util = Integer
 
 data Money = Double
 
-data Goods = (Price::Money, Quantity::Integer)
+data Goods = Price::Money Quantity::Integer
 
-data Buyer = (Util, CashOnHand::Money, [Goods])
+data Buyer = Util CashOnHand::Money [Goods]
 
-data Seller = (MinPrice::Money, [Goods])
+data Seller = MinPrice::Money [Goods]
 
-data Market = ([Buyer], [Seller])
+data Market = [Buyer] [Seller]
 
 priceFix :: Market a -> Market a
+
+calcUtilPerMoney :: Seller -> Buyer -> Goods -> [(Goods, Util)]
+
+buy :: (Goods, Util) -> Buyer -> Seller -> Market
+
 
