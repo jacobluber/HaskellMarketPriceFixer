@@ -23,10 +23,18 @@ val testsellers = [Seller 4 43,Seller 6 67,Seller 2 12]
 val testbuyers = [Buyer 500 10 0,Buyer 100 50 0,Buyer 2000 500 0] 
 
 priceFix:: [MarketParticipant] -> [MarketParticipant] -> Market
-priceFix buyers sellers result = if head(buyers) == [] then result else 
+priceFix buyers sellers result = if buyers == [] then result else 
                                  let buyerUtility = (\(Buyer x y z) -> x) head(buyers)
                                      sellerPrices = map (\(Seller x y) -> y) testsellers  
-                                     utilityPerSeller = map (\price -> price/BuyerUtility) sellerPrices                                 
+                                     sellerQuantity = map (\(Seller x y) -> x) testsellers
+                                     utilityPerSeller = map (\price -> price/BuyerUtility) sellerPrices    
+                                     max = maximum utilityPerSeller 
+                                     quantutils = zip utilityPerSeller sellerQuantity 
+                                     bestutil = filter (max,_) quantutils
+                                     if snd(bestutil) 
+                                     
+                                     
+                                                                 
                                      
 
 
