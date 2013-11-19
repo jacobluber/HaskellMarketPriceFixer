@@ -11,5 +11,6 @@ executable HaskellMarketPriceFixer
   ghc-options:     -Wall
   other-modules:   
                    PFixerMultGoods,
-                   PFixerSingleGood
+                   PFixerSingleGood,
+                   PFixerMultGoodDimMargUtil
 
