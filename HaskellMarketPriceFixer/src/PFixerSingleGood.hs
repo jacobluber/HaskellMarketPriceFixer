@@ -1,4 +1,4 @@
-module PFixer where
+module PFixerSingleGood where
 
 import Data.List
 

@@ -44,10 +44,7 @@ matchMarketParticipants sellersWithInventory dudSellers activeBuyer = if sellers
                                                                                                                         newGoods = [newGood] ++ irrelevantRelevantBuyerGoods 
                                                                                                                         oldBuyerMoney = (\(Buyer a b c) -> c) activeBuyer 
                                                                                                                         buyerIdent = (\(Buyer a b c) -> a) activeBuyer 
-                                                                                                                        updateBuyer = (Buyer buyerIdent newGoods (oldBuyerMoney-sellerPrice))
-                                                                                                                        
-                                                                                                                        
-                                                                                                                        
+                                                                                                                        updateBuyer = (Buyer buyerIdent newGoods (oldBuyerMoney-sellerPrice))                                                                                                                                                                                                                                                                      
                                                                                                                         --updateBuyer = Buyer buyerUtility (buyerMoneyHeld-sellerPrice) (buyerUnitsHeld+1)
                                                                                                                         updateActiveSeller = SellerU sellerIdent (sellerGood, sellerQuantity-1, sellerPrice, sellerUtility) 
                                                                                                                         --updateActiveSeller = (sellerUtility,(sellerQuantity-1),sellerPrice)
