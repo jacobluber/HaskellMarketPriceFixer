@@ -17,6 +17,22 @@ sTup (_,x,_,_) = x
 tTup (_,_,x,_) = x
 frTup (_,_,_,x) = x
 
+type Name = String
+type Money = Float
+type Price = Float
+type PName = String
+type Utility = Float
+type Quantity = Int
+type Inv {-short for inventory-} = (PName, Quantity, Price) --money is the price paid, usually. You will need to decouple Sellers from prices, at least at first.
+type Want = (PName, Utility)
+type PricingScheme = [(PName, Money)] -- store them separately, or create a different kind of seller for a seller with prices.
+data MarketParticipant = Seller Name [Inv] Money | Buyer Name [Want] Money Utility
+
+data Seller = S {sname :: Name, inventory :: [Inv], profit :: Money}
+data Buyer = B {bname :: Name, wants :: [Want], utility :: Utility} deriving (Show)
+type Market = ([Buyer], [Seller], PricingScheme)
+
+
 matchMarketParticipants :: [SpecialSeller] -> [SpecialSeller] -> MarketParticipant -> (MarketParticipant,SpecialSeller,SpecialSeller,Float)
 matchMarketParticipants sellersWithInventory dudSellers activeBuyer = if sellersWithInventory == [] 
                                                                       then (activeBuyer, NoSeller, NoSeller, 0) 
