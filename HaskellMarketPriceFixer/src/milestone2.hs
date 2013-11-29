@@ -17,7 +17,7 @@ type Market = ([Buyer], [Seller], PricingScheme)
 {- helper functions -} 
 buyerInterested buyers pName = filter(\x-> pName `elem` (map (wname) $ wants x)) buyers
 
-want1 = W "mi goreng" 32 3 
+want1 = W "laptop" 1000 500 
 want2 = W "green tea" 20 10
 buyer1 = B "karen" [want1, want2] 0
 buyer2 = B "irene" [want1] 0
