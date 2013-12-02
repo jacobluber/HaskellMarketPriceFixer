@@ -1,71 +1,40 @@
 module PFixerMultGoodDimMargUtil where
 
-data MarketParticipant = Seller String [(String, Float, Float)] Float | Buyer String [(String, Float, (Float,Float,Float))] Float Float deriving (Show, Ord, Eq)
-data EndMarket = EndParticipants Float Float [MarketParticipant] deriving (Show, Ord, Eq)
-data Market = Participants [MarketParticipant] | Empty deriving (Show, Ord, Eq)
-data SpecialSeller = SellerU String (String, Float, Float, Float) | NoSeller deriving (Show, Ord, Eq)
-testsellers = [Seller "A" [("a",4,1),("b",7,2),("c",5,3)] 0,Seller "B" [("a",1,3),("b",8,2),("c",2,1)] 0,Seller "C" [("a",0,2),("b",4,2),("c",1,2)] 0] 
-testbuyers = [Buyer "Z" [("a",0,(4,2,(4*100)/(0+2))),("b",0,(2,3,(2*100)/(0+3))),("c",0,(6,1,(6*100)/(0+1)))] 100 0, Buyer "Y" [("a",0,(5,4,(5*50)/(0+4))),("b",0,(4,2,(4*50)/(0+5))),("c",0,(2,1,(2*50)/(0+2)))] 50 0,Buyer "X" [("a",0,(5,1,(5*250)/(0+1))),("b",0,(3,0.9,(3*250)/(0+0.9))),("c",0,(1,2,(4*250)/(0+2)))] 250 0] 
+import TupleOps
+import DataType
 
---SpecialSeller SellerStringIdentifier (GoodIdentifier,UnitsOfGoodHeld,PriceChargedForGood,UtilityPerDollarForActiveBuyer) 
---Seller SellerStringIdentifier [(GoodIdentifier,UnitsOfGoodHeld,PricePaidForGood)] MoneyHeld
---Buyer BuyerStringIdentifier [(GoodIdentifier,UnitsOfGoodHeld,(WealthDeccrementer,QuantityIncrementer,MarginalUtilityFunction)] MoneyHeld AccumulatedUtility 
---EndMarket TotalSellerProfit TotalBuyerUtility [MarketParticipant]
+sellerUtils :: [Offer] -> [Float]
+sellerUtils sellers = map (\(OfferInfo sellerInfo goodInfo) -> (frTup goodInfo)) sellers
 
-fTup (x,_,_,_) = x
-sTup (_,x,_,_) = x
-tTup (_,_,x,_) = x
-frTup (_,_,_,x) = x
+generateNewGood :: (Num t1, Num t2) => (String, t1, t2, t2) -> (String, t1, t2, t2)
+generateNewGood input = (\(goodIdentifier,unitsHeld,marginalUtility,utilityDecrementer) -> (goodIdentifier,unitsHeld+1,marginalUtility-utilityDecrementer,utilityDecrementer)) input
 
-type Name = String
-type Money = Float
-type Price = Float
-type PName = String
-type Utility = Float
-type Quantity = Int
-type Inv {-short for inventory-} = (PName, Quantity, Price) --money is the price paid, usually. You will need to decouple Sellers from prices, at least at first.
-type Want = (PName, Utility)
-type PricingScheme = [(PName, Money)] -- store them separately, or create a different kind of seller for a seller with prices.
-data MarketParticipant = Seller Name [Inv] Money | Buyer Name [Want] Money Utility
+generateActiveSeller :: [Offer] -> Offer
+generateActiveSeller sellers = head [OfferInfo sellerId (goodId,unitsGoodHeld,priceCharged,utilityPerDollar)|OfferInfo sellerId (goodId,unitsGoodHeld,priceCharged,utilityPerDollar) <- sellers,utilityPerDollar == (maximum (sellerUtils sellers))]
 
-data Seller = S {sname :: Name, inventory :: [Inv], profit :: Money}
-data Buyer = B {bname :: Name, wants :: [Want], utility :: Utility} deriving (Show)
-type Market = ([Buyer], [Seller], PricingScheme)
+generateTempInactiveSellers :: [Offer] -> [Offer]
+generateTempInactiveSellers sellers = [OfferInfo sellerId (goodId,unitsGoodHeld,priceCharged,utilityPerDollar)|OfferInfo sellerId (goodId,unitsGoodHeld,priceCharged,utilityPerDollar) <- sellers,utilityPerDollar /= (maximum (sellerUtils sellers))]
 
+generateBuyerGood :: MarketParticipant -> Offer -> (String, Float, Float, Float)
+generateBuyerGood buyer seller = head [(goodIdentifier,unitsHeld,marginalUtility,utilityDecrementer)|(goodIdentifier,unitsHeld,marginalUtility,utilityDecrementer) <- (buyerGoodInfo buyer),goodIdentifier == (fTup (goodInfo seller))]  
 
-matchMarketParticipants :: [SpecialSeller] -> [SpecialSeller] -> MarketParticipant -> (MarketParticipant,SpecialSeller,SpecialSeller,Float)
-matchMarketParticipants sellersWithInventory dudSellers activeBuyer = if sellersWithInventory == [] 
-                                                                      then (activeBuyer, NoSeller, NoSeller, 0) 
-                                                                      else let utilityPerSeller = map (\(SellerU a (b,c,d,e)) -> e) sellersWithInventory
-                                                                               mostUtility = maximum utilityPerSeller
-                                                                               activeSeller = head [SellerU a (b,c,d,e)|SellerU a (b,c,d,e) <- sellersWithInventory,e == mostUtility]
-                                                                               tempInactiveSellers = [SellerU a (b,c,d,e)|SellerU a (b,c,d,e) <- sellersWithInventory,e /= mostUtility]
-                                                                               buyerMoneyHeld = (\(Buyer x y z w) -> z) activeBuyer
-                                                                               sellerPrice = (\(SellerU a (b,c,d,e)) -> d) activeSeller
-                                                                               sellerQuantity = (\(SellerU a (b,c,d,e)) -> c) activeSeller
-                                                                               sellerUtility = (\(SellerU a (b,c,d,e)) -> e) activeSeller
-                                                                               sellerGood = (\(SellerU a (b,c,d,e)) -> b) activeSeller
-                                                                               sellerIdent =  (\(SellerU a (b,c,d,e)) -> a) activeSeller
-                                                                            in if (buyerMoneyHeld > sellerPrice) && (mostUtility > 0) then let oldBuyerMoney = (\(Buyer a b c d) -> c) activeBuyer 
-                                                                                                                                               newMoney = oldBuyerMoney-sellerPrice
-                                                                                                                                               relevantBuyerGoods = (\(Buyer a b c d) -> b) activeBuyer
-                                                                                                                                               goodIdent = (\(SellerU a (b,c,d,e)) -> b) activeSeller
-                                                                                                                                               relevantRelevantBuyerGood = head [(a,b,c)|(a,b,c) <-relevantBuyerGoods,a == goodIdent]
-                                                                                                                                               irrelevantRelevantBuyerGoods = [(a,b,c)|(a,b,c) <- relevantBuyerGoods,a /= goodIdent]
-                                                                                                                                               utilFunc = (\(a,b,c) -> c) relevantRelevantBuyerGood
-                                                                                                                                               wealthDecrementer = (\(a,b,c) -> a) utilFunc
-                                                                                                                                               quantityIncrementer = (\(a,b,c) -> b) utilFunc 
-                                                                                                                                               utilityGained = (\(a,b,c) -> c) utilFunc
-                                                                                                                                               quantityOriginallyHeld = (\(a,b,c) -> b) relevantRelevantBuyerGood                                                                                        
-                                                                                                                                               newUtilFunc = (wealthDecrementer, quantityIncrementer, ((wealthDecrementer*newMoney)/(quantityIncrementer+(quantityOriginallyHeld+1))))
-                                                                                                                                               newGood = (\(a,b,c) -> (a,b+1,newUtilFunc)) relevantRelevantBuyerGood
-                                                                                                                                               newGoods = [newGood] ++ irrelevantRelevantBuyerGoods                                             
-                                                                                                                                               buyerIdent = (\(Buyer a b c d) -> a) activeBuyer
-                                                                                                                                               oldAccum = (\(Buyer a b c d) -> d) activeBuyer 
-                                                                                                                                               updateBuyer = (Buyer buyerIdent newGoods newMoney (oldAccum+utilityGained))                                                                                                                                                                                                                                                                                                            
-                                                                                                                                               updateActiveSeller = SellerU sellerIdent (sellerGood, sellerQuantity-1, sellerPrice, sellerUtility)                                                                                                                        
-                                                                                                                                            in (updateBuyer, updateActiveSeller, activeSeller, sellerPrice)                                                                                                                   
-                                                                                                                                            else matchMarketParticipants tempInactiveSellers ([activeSeller] ++ dudSellers) activeBuyer                                                                                                                                                                                 
+generateBuyerGoods :: MarketParticipant -> Offer -> [(String, Float, Float, Float)]
+generateBuyerGoods buyer seller = [(goodIdentifier,unitsHeld,marginalUtility,utilityDecrementer)|(goodIdentifier,unitsHeld,marginalUtility,utilityDecrementer) <- (buyerGoodInfo buyer),goodIdentifier /= (fTup (goodInfo seller))]
+
+matchMarketParticipants :: [Offer] -> [Offer] -> MarketParticipant -> (MarketParticipant,Offer,Offer,Float)
+matchMarketParticipants sellersWithInventory dudSellers activeBuyer = 
+ if sellersWithInventory == [] 
+ then (activeBuyer, NoSeller, NoSeller, 0) 
+ else let activeSeller = generateActiveSeller sellersWithInventory
+          tempInactiveSellers = generateTempInactiveSellers sellersWithInventory
+      in if ((moneyHeld activeBuyer) > (tTup (goodInfo activeSeller))) && ((maximum (sellerUtils sellersWithInventory)) > 0) 
+         then let buyerGood = generateBuyerGood activeBuyer activeSeller               
+                  buyerGoods = generateBuyerGoods activeBuyer activeSeller
+                  newGoods = [generateNewGood buyerGood] ++ buyerGoods                                             
+                  updateBuyer = Buyer (buyerId activeBuyer) newGoods ((moneyHeld activeBuyer)-(tTup (goodInfo activeSeller))) ((accumulatedUtility activeBuyer)+(tTup buyerGood))                                                                                                                                                                                                                                                                                                          
+                  updateActiveSeller = OfferInfo (sellerInfo activeSeller ) ((fTup (goodInfo activeSeller)), ((sTup (goodInfo activeSeller))-1), (tTup (goodInfo activeSeller)), (frTup (goodInfo activeSeller)))                                                                                                                        
+              in (updateBuyer, updateActiveSeller, activeSeller, (tTup (goodInfo activeSeller)))                                                                                                                   
+         else matchMarketParticipants tempInactiveSellers ([activeSeller] ++ dudSellers) activeBuyer                                                                                                                                                                                 
 
 priceFix:: [MarketParticipant] -> [MarketParticipant] -> Market -> EndMarket
 priceFix buyers sellers result = if buyers == [] 
@@ -74,44 +43,49 @@ priceFix buyers sellers result = if buyers == []
                                           accumulatedBuyerUtility = foldl (+) 0 accumulatedBuyerUtilities
                                           accumulatedSellerMoney = map (\(Seller a b c) -> c) sellers
                                           accumulatedSellerTotalMoney = foldl (+) 0 accumulatedSellerMoney 
-                                          in EndParticipants accumulatedSellerTotalMoney accumulatedBuyerUtility (unpackedResult++sellers)
-                                 else let (Buyer identifier goods money accumUtility) = head(buyers)
+                                       in EndParticipants accumulatedSellerTotalMoney accumulatedBuyerUtility (unpackedResult++sellers)
+                                
+                                 else let buyer = head(buyers)
+                                          --(Buyer identifier goods money accumUtility) = head(buyers)
                                           inactiveBuyers = tail(buyers)
-                                          utilVals = map(\(a,b,c) -> c) goods
-                                          buyerUtility = map (\(a,b,c) -> c) utilVals
+                                          utilVals = map (\(a,b,c,d) -> c) (buyerGoodInfo buyer)
+                                          --buyerUtility = map (\(a,b,c) -> c) utilVals
                                           sellerVals = map (\(Seller a b c) -> map (\b -> (a,b)) b) sellers
-                                          specialSellerInput = concat (map (\t -> zip buyerUtility t) sellerVals)
-                                          generateSpecialSellers = map (\(a, (b, (c, d, e))) -> SellerU b (c,d,e,a/e)) specialSellerInput
-                                          specialSellersWithInventory = [SellerU a (b,c,d,e)| SellerU a (b,c,d,e) <- generateSpecialSellers, c>0]
-                                          specialSellersWithoutInventory = [SellerU a (b,c,d,e)| SellerU a (b,c,d,e) <- generateSpecialSellers, c==0]
-                                          transaction = matchMarketParticipants specialSellersWithInventory [] (Buyer identifier goods money accumUtility)
+                                          --specialSellerInput = concat (map (\t -> zip buyerUtility t) sellerVals)
+                                          specialSellerInput = concat (map (\t -> zip utilVals t) sellerVals)
+                                          generateSpecialSellers = map (\(a, (b, (c, d, e))) -> OfferInfo b (c,d,e,a/e)) specialSellerInput
+                                          specialSellersWithInventory = [OfferInfo a (b,c,d,e)| OfferInfo a (b,c,d,e) <- generateSpecialSellers, c>0]
+                                          specialSellersWithoutInventory = [OfferInfo a (b,c,d,e)| OfferInfo a (b,c,d,e) <- generateSpecialSellers, c==0]
+                                          transaction = matchMarketParticipants specialSellersWithInventory [] buyer
                                           updatedBuyer = fTup(transaction)
                                           updatedSeller = sTup(transaction)
                                           originalSeller = tTup(transaction)
                                           moneyToSeller = frTup(transaction)
                                           unpackedInitialResult = (\(Participants x) -> x) result
-                                      in if (updatedBuyer == (Buyer identifier goods money accumUtility)) && (result == Empty) 
-                                         then priceFix inactiveBuyers sellers (Participants ([(Buyer identifier goods money accumUtility)]))
-                                         else if updatedBuyer == (Buyer identifier goods money accumUtility)
-                                              then priceFix inactiveBuyers sellers  (Participants ([(Buyer identifier goods money accumUtility)]++unpackedInitialResult))
-                                              else let newSellerIdent =  (\(SellerU a (b,c,d,e)) -> a) originalSeller
+                                      in if ((updatedBuyer == buyer) && (result == Empty)) 
+                                         then priceFix inactiveBuyers sellers (Participants ([buyer]))
+                                         else if updatedBuyer == buyer
+                                              then priceFix inactiveBuyers sellers  (Participants ([buyer]++unpackedInitialResult))
+                                              else let newSellerIdent =  (\(OfferInfo a (b,c,d,e)) -> a) originalSeller
                                                        relevantSeller = head [Seller a b c|Seller a b c <- sellers, a == newSellerIdent] 
                                                        irrelevantSellers = [Seller a b c|Seller a b c <- sellers, a /= newSellerIdent] 
                                                        relevantSellerGoods = (\(Seller a b c) -> b) relevantSeller
-                                                       goodIdent = (\(SellerU a (b,c,d,e)) -> (b,c,d)) originalSeller
+                                                       goodIdent = (\(OfferInfo a (b,c,d,e)) -> (b,c,d)) originalSeller
                                                        relevantReleavntSellerGood = head [b|b<-relevantSellerGoods,b == goodIdent]
                                                        irrelevantRelevantSellerGoods = [b|b<-relevantSellerGoods,b /= goodIdent]
-                                                       newGood = (\(SellerU a (b,c,d,e)) -> (b,c,d)) updatedSeller
+                                                       newGood = (\(OfferInfo a (b,c,d,e)) -> (b,c,d)) updatedSeller
                                                        newGoods = [newGood] ++ irrelevantRelevantSellerGoods 
                                                        oldSellerMoney = (\(Seller a b c) -> c) relevantSeller  
                                                        newSeller = (Seller newSellerIdent newGoods (oldSellerMoney+moneyToSeller))
                                                        newSellers = irrelevantSellers ++ [newSeller]
                                                    in priceFix (updatedBuyer:inactiveBuyers) newSellers result
 
+
+
 generateSellerInput :: MarketParticipant -> [[Float]]
 generateSellerInput x = let goods = (\(Seller a b c) -> b) x
                             purchasePrices = map (\(a,b,c) -> c) goods
-                            range = (map (\x -> [x..(x*2)]) purchasePrices)
+                            range = (map (\x -> [x..(x*1.2)]) purchasePrices)
                             result = [[x,y,z]|x<-head(range),y<-head(tail(range)),z<-last(range)]
                         in result        
 
