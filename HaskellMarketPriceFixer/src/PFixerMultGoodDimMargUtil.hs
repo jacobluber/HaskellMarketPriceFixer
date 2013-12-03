@@ -36,6 +36,9 @@ matchMarketParticipants sellersWithInventory dudSellers activeBuyer =
               in (updateBuyer, updateActiveSeller, activeSeller, (tTup (goodInfo activeSeller)))                                                                                                                   
          else matchMarketParticipants tempInactiveSellers ([activeSeller] ++ dudSellers) activeBuyer                                                                                                                                                                                 
 
+--generateEndMarket sellers result = let unpackedResult = (\(Participants x) -> x) result
+                  
+
 priceFix:: [MarketParticipant] -> [MarketParticipant] -> Market -> EndMarket
 priceFix buyers sellers result = if buyers == [] 
                                  then let unpackedResult = (\(Participants x) -> x) result
@@ -85,28 +88,48 @@ priceFix buyers sellers result = if buyers == []
 generateSellerInput :: MarketParticipant -> [[Float]]
 generateSellerInput x = let goods = (\(Seller a b c) -> b) x
                             purchasePrices = map (\(a,b,c) -> c) goods
-                            range = (map (\x -> [x..(x*1.2)]) purchasePrices)
-                            result = [[x,y,z]|x<-head(range),y<-head(tail(range)),z<-last(range)]
+                            range = (map (\x -> [x..(x*2)]) purchasePrices)
+                            result = sequence range
                         in result        
 
 generateSellerInputs x =  map generateSellerInput x 
 
-
 generateFinalInputs x = let input = generateSellerInputs x
-                            result = [[x,y,z]|x<-head(input),y<-head(tail(input)),z<-last(input)]
+                            result = sequence input 
                         in result
+                                               
+getIds a = sellerId a
 
-sellerval = (\(Seller a [(b,c,d),(e,f,g),(h,i,j)] k) -> (Seller a [(b,c,-1),(e,f,-2),(h,i,-3)] k))
-sellervals = map sellerval testsellers
+sellerIds = map getIds testsellers
+
+getGoods a = map (\(a,b,c) -> (a,b,-1)) (sellerGoodInfo a)  
+
+sellervals = map getGoods testsellers
+
 input = map (\a -> zip a sellervals) (generateFinalInputs testsellers)
-sellers = map (\([x,y,z],Seller a [(b,c,-1),(e,f,-2),(h,i,-3)] k) -> Seller a [(b,c,x),(e,f,y),(h,i,z)] k) 
-finalSellers = map sellers input
-marketOutcomes = map (\b -> priceFix testbuyers b Empty) finalSellers
+
+createSellerGoods :: ([Float], [(String, Float, Integer)]) -> [(String,Float,Float)]
+createSellerGoods ([], _) = []
+createSellerGoods (_,[]) = []
+createSellerGoods (x:xs, y:ys) = [(fTup' y,sTup' y,x)] ++ createSellerGoods (xs, ys)
+createSellersGoods a = map (map createSellerGoods) a 
+
+almostSellers a = map (zip sellerIds) (createSellersGoods a) 
+
+createSeller (x,y) = Seller x y 0
+
+createSellers a = map (map createSeller) (almostSellers a) 
+
+marketOutcomes = map (\b -> priceFix testbuyers b Empty) (createSellers input)
+
 mostProfit = maximum (map (\(EndParticipants x y z) -> x) marketOutcomes)
+
 mostUtility = maximum (map (\(EndParticipants x y z) -> y) marketOutcomes)
+
 marketProfits = [(EndParticipants x y z)|(EndParticipants x y z)<-marketOutcomes, x==mostProfit]
+
 marketUtility = [(EndParticipants x y z)|(EndParticipants x y z)<-marketOutcomes, y==mostUtility]
---outcome = priceFix testbuyers testsellers Empty                                  
+                              
 
 main :: IO() 
 main = do
