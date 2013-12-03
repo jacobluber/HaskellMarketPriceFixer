@@ -10,7 +10,7 @@ executable HaskellMarketPriceFixer
   build-depends:   base >= 4
   ghc-options:     -Wall
   other-modules:   
-                   PFixerMultGoods,
-                   PFixerSingleGood,
-                   PFixerMultGoodDimMargUtil
+                   TupleOps,
+                   OldWork,
+                   Milestone2
 
