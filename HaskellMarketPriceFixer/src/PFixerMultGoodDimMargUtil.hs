@@ -36,77 +36,129 @@ matchMarketParticipants sellersWithInventory dudSellers activeBuyer =
               in (updateBuyer, updateActiveSeller, activeSeller, (tTup (goodInfo activeSeller)))                                                                                                                   
          else matchMarketParticipants tempInactiveSellers ([activeSeller] ++ dudSellers) activeBuyer                                                                                                                                                                                 
 
---generateEndMarket sellers result = let unpackedResult = (\(Participants x) -> x) result
-                  
+generateEndMarket :: [MarketParticipant] -> Market -> EndMarket
+generateEndMarket sellers result = 
+ let unpackedResult = (\(Participants x) -> x) result
+     accumulatedBuyerUtilities = map (\(Buyer a b c d) -> d) unpackedResult
+     accumulatedBuyerUtility = foldl (+) 0 accumulatedBuyerUtilities
+     accumulatedSellerMoney = map (\(Seller a b c) -> c) sellers
+     accumulatedSellerTotalMoney = foldl (+) 0 accumulatedSellerMoney                 
+  in EndParticipants accumulatedSellerTotalMoney accumulatedBuyerUtility (unpackedResult++sellers)                
 
+generateUtilVals :: [(t, t1, b, t3)] -> [b]
+generateUtilVals = map tTup 
+
+generateSellerVals :: [MarketParticipant] -> [[(String, (String, Float, Float))]]
+generateSellerVals = map (\(Seller a b c) -> map (\b -> (a,b)) b)
+
+generateOfferInput :: [a] -> [[b]] -> [(a, b)]
+generateOfferInput utils sellers = concat (map (\t -> zip utils t) sellers)
+
+generateOffers :: [(Float, (String, (String, Float, Float)))] -> [Offer]
+generateOffers input = map (\(a, (b, (c, d, e))) -> OfferInfo b (c,d,e,a/e)) input
+
+generateValidOffers :: [Offer] -> [Offer]
+generateValidOffers offers = [OfferInfo a (b,c,d,e)| OfferInfo a (b,c,d,e) <- offers, c>0]
+
+generateInvalidOffers :: [Offer] -> [Offer]
+generateInvalidOffers offers = [OfferInfo a (b,c,d,e)| OfferInfo a (b,c,d,e) <- offers, c==0]
+
+generateUnpackedInitialResult :: Market -> [MarketParticipant]
+generateUnpackedInitialResult = (\(Participants x) -> x)
+
+makeTransaction :: [(t, t1, Float, t3)] -> [MarketParticipant] -> [MarketParticipant] -> (MarketParticipant, Offer, Offer, Float)
+makeTransaction utilValsInput sellers buyers = 
+ let utilVals = generateUtilVals utilValsInput
+     sellerVals = generateSellerVals sellers
+     offerInput = generateOfferInput utilVals sellerVals
+     offers = generateOffers offerInput
+     validOffers = generateValidOffers offers
+     invalidOffers = generateInvalidOffers offers
+ in matchMarketParticipants validOffers [] (head(buyers))
+
+generateNewSellerIdent :: (t, t1, Offer, t3) -> String     
+generateNewSellerIdent transaction = (\(OfferInfo a (b,c,d,e)) -> a) (tTup(transaction))
+
+generateRelevantSeller :: [MarketParticipant] -> String -> MarketParticipant
+generateRelevantSeller sellers newseller = head [Seller a b c|Seller a b c <- sellers, a == newseller] 
+
+generateIrrelevantSellers :: [MarketParticipant] -> String -> [MarketParticipant]
+generateIrrelevantSellers sellers newseller = [Seller a b c|Seller a b c <- sellers, a /= newseller] 
+
+generateRelevantSellerGoods :: MarketParticipant -> [(String, Float, Float)]
+generateRelevantSellerGoods = (\(Seller a b c) -> b)
+
+generategoodIdent :: Offer -> (String, Float, Float)
+generategoodIdent = (\(OfferInfo a (b,c,d,e)) -> (b,c,d))
+
+generateIrrelevantRelevantSellerGoods :: Eq t => [t] -> t -> [t]
+generateIrrelevantRelevantSellerGoods relevantSellerGoods goodIdent = [b|b<-relevantSellerGoods,b /= goodIdent]
+
+generateNewGoods :: (t, Offer, t2, t3) -> [(String, Float, Float)] -> [(String, Float, Float)]
+generateNewGoods transaction irrelevantRelevantSellerGoods =
+ let newGood = (\(OfferInfo a (b,c,d,e)) -> (b,c,d)) (sTup(transaction))
+ in [newGood] ++ irrelevantRelevantSellerGoods 
+
+generateNewSellers :: MarketParticipant -> [Char] -> (t1, Offer, t2, Float) -> [(String, Float, Float)] -> t -> [MarketParticipant] -> [MarketParticipant] 
+generateNewSellers relevantSeller newSellerIdent transaction irrelevantRelevantSellerGoods oldSellerMoney irrelevantSellers = 
+ let oldSellerMoney = (\(Seller a b c) -> c) relevantSeller 
+     newSeller = (Seller newSellerIdent (generateNewGoods transaction irrelevantRelevantSellerGoods) (oldSellerMoney+(frTup(transaction)))) 
+ in irrelevantSellers ++ [newSeller]
+
+recursivePriceFix :: (MarketParticipant, Offer, Offer, Float) -> [MarketParticipant] -> [MarketParticipant] -> Market -> EndMarket
+recursivePriceFix transaction sellers buyers result = 
+ let newSellerIdent =  generateNewSellerIdent transaction
+     relevantSeller = generateRelevantSeller sellers newSellerIdent 
+     irrelevantSellers = generateIrrelevantSellers sellers newSellerIdent
+     relevantSellerGoods = generateRelevantSellerGoods relevantSeller
+     goodIdent = generategoodIdent (tTup(transaction))
+     irrelevantRelevantSellerGoods = generateIrrelevantRelevantSellerGoods relevantSellerGoods goodIdent
+     oldSellerMoney = (\(Seller a b c) -> c) relevantSeller 
+ in priceFix ((fTup(transaction)):(tail(buyers))) (generateNewSellers relevantSeller newSellerIdent transaction irrelevantRelevantSellerGoods oldSellerMoney irrelevantSellers) result
+ 
 priceFix:: [MarketParticipant] -> [MarketParticipant] -> Market -> EndMarket
-priceFix buyers sellers result = if buyers == [] 
-                                 then let unpackedResult = (\(Participants x) -> x) result
-                                          accumulatedBuyerUtilities = map (\(Buyer a b c d) -> d) unpackedResult
-                                          accumulatedBuyerUtility = foldl (+) 0 accumulatedBuyerUtilities
-                                          accumulatedSellerMoney = map (\(Seller a b c) -> c) sellers
-                                          accumulatedSellerTotalMoney = foldl (+) 0 accumulatedSellerMoney 
-                                       in EndParticipants accumulatedSellerTotalMoney accumulatedBuyerUtility (unpackedResult++sellers)
-                                
-                                 else let buyer = head(buyers)
-                                          --(Buyer identifier goods money accumUtility) = head(buyers)
-                                          inactiveBuyers = tail(buyers)
-                                          utilVals = map (\(a,b,c,d) -> c) (buyerGoodInfo buyer)
-                                          --buyerUtility = map (\(a,b,c) -> c) utilVals
-                                          sellerVals = map (\(Seller a b c) -> map (\b -> (a,b)) b) sellers
-                                          --specialSellerInput = concat (map (\t -> zip buyerUtility t) sellerVals)
-                                          specialSellerInput = concat (map (\t -> zip utilVals t) sellerVals)
-                                          generateSpecialSellers = map (\(a, (b, (c, d, e))) -> OfferInfo b (c,d,e,a/e)) specialSellerInput
-                                          specialSellersWithInventory = [OfferInfo a (b,c,d,e)| OfferInfo a (b,c,d,e) <- generateSpecialSellers, c>0]
-                                          specialSellersWithoutInventory = [OfferInfo a (b,c,d,e)| OfferInfo a (b,c,d,e) <- generateSpecialSellers, c==0]
-                                          transaction = matchMarketParticipants specialSellersWithInventory [] buyer
-                                          updatedBuyer = fTup(transaction)
-                                          updatedSeller = sTup(transaction)
-                                          originalSeller = tTup(transaction)
-                                          moneyToSeller = frTup(transaction)
-                                          unpackedInitialResult = (\(Participants x) -> x) result
-                                      in if ((updatedBuyer == buyer) && (result == Empty)) 
-                                         then priceFix inactiveBuyers sellers (Participants ([buyer]))
-                                         else if updatedBuyer == buyer
-                                              then priceFix inactiveBuyers sellers  (Participants ([buyer]++unpackedInitialResult))
-                                              else let newSellerIdent =  (\(OfferInfo a (b,c,d,e)) -> a) originalSeller
-                                                       relevantSeller = head [Seller a b c|Seller a b c <- sellers, a == newSellerIdent] 
-                                                       irrelevantSellers = [Seller a b c|Seller a b c <- sellers, a /= newSellerIdent] 
-                                                       relevantSellerGoods = (\(Seller a b c) -> b) relevantSeller
-                                                       goodIdent = (\(OfferInfo a (b,c,d,e)) -> (b,c,d)) originalSeller
-                                                       relevantReleavntSellerGood = head [b|b<-relevantSellerGoods,b == goodIdent]
-                                                       irrelevantRelevantSellerGoods = [b|b<-relevantSellerGoods,b /= goodIdent]
-                                                       newGood = (\(OfferInfo a (b,c,d,e)) -> (b,c,d)) updatedSeller
-                                                       newGoods = [newGood] ++ irrelevantRelevantSellerGoods 
-                                                       oldSellerMoney = (\(Seller a b c) -> c) relevantSeller  
-                                                       newSeller = (Seller newSellerIdent newGoods (oldSellerMoney+moneyToSeller))
-                                                       newSellers = irrelevantSellers ++ [newSeller]
-                                                   in priceFix (updatedBuyer:inactiveBuyers) newSellers result
-
+priceFix buyers sellers result = 
+ if buyers == [] 
+ then generateEndMarket sellers result
+ else let transaction = makeTransaction (buyerGoodInfo (head(buyers))) sellers buyers
+      in if (((fTup(transaction)) == (head(buyers))) && (result == Empty)) 
+         then priceFix (tail(buyers)) sellers (Participants ([(head(buyers))]))
+         else if (fTup(transaction)) == (head(buyers))
+              then priceFix (tail(buyers)) sellers  (Participants ([(head(buyers))]++(generateUnpackedInitialResult result)))
+              else recursivePriceFix transaction sellers buyers result
 
 
 generateSellerInput :: MarketParticipant -> [[Float]]
-generateSellerInput x = let goods = (\(Seller a b c) -> b) x
-                            purchasePrices = map (\(a,b,c) -> c) goods
-                            range = (map (\x -> [x..(x*2)]) purchasePrices)
-                            result = sequence range
-                        in result        
+generateSellerInput x = 
+ let goods = (\(Seller a b c) -> b) x
+     purchasePrices = map (\(a,b,c) -> c) goods
+     range = (map (\x -> [x..(x*2)]) purchasePrices)
+     result = sequence range
+ in result        
 
+generateSellerInputs :: [MarketParticipant] -> [[[Float]]]
 generateSellerInputs x =  map generateSellerInput x 
 
-generateFinalInputs x = let input = generateSellerInputs x
-                            result = sequence input 
-                        in result
-                                               
+generateFinalInputs :: [MarketParticipant] -> [[[Float]]]
+generateFinalInputs x = 
+ let input = generateSellerInputs x
+     result = sequence input 
+ in result
+
+getIds :: MarketParticipant -> String                                              
 getIds a = sellerId a
 
+sellerIds :: [String]
 sellerIds = map getIds testsellers
 
+getGoods :: Num t => MarketParticipant -> [(String, Float, t)]
 getGoods a = map (\(a,b,c) -> (a,b,-1)) (sellerGoodInfo a)  
 
-sellervals = map getGoods testsellers
+sellervals :: Num t => [MarketParticipant] -> [[(String, Float, t)]]
+sellervals a= map getGoods a
 
-input = map (\a -> zip a sellervals) (generateFinalInputs testsellers)
+input :: [[([Float], [(String, Float, Integer)])]]
+input = map (\a -> zip a (sellervals currentsellerinput)) (generateFinalInputs currentsellerinput)
 
 createSellerGoods :: ([Float], [(String, Float, Integer)]) -> [(String,Float,Float)]
 createSellerGoods ([], _) = []
@@ -114,21 +166,32 @@ createSellerGoods (_,[]) = []
 createSellerGoods (x:xs, y:ys) = [(fTup' y,sTup' y,x)] ++ createSellerGoods (xs, ys)
 createSellersGoods a = map (map createSellerGoods) a 
 
+almostSellers :: [[([Float], [(String, Float, Integer)])]] -> [[(String, [(String, Float, Float)])]]
 almostSellers a = map (zip sellerIds) (createSellersGoods a) 
 
+createSeller :: (String, [(String, Float, Float)]) -> MarketParticipant
 createSeller (x,y) = Seller x y 0
 
+createSellers :: [[([Float], [(String, Float, Integer)])]] -> [[MarketParticipant]]
 createSellers a = map (map createSeller) (almostSellers a) 
 
-marketOutcomes = map (\b -> priceFix testbuyers b Empty) (createSellers input)
+marketOutcomes :: [EndMarket]
+marketOutcomes = map (\b -> priceFix currentbuyerinput b Empty) (createSellers input)
 
+mostProfit :: Float
 mostProfit = maximum (map (\(EndParticipants x y z) -> x) marketOutcomes)
 
+mostUtility :: Float
 mostUtility = maximum (map (\(EndParticipants x y z) -> y) marketOutcomes)
 
+marketProfits :: [EndMarket]
 marketProfits = [(EndParticipants x y z)|(EndParticipants x y z)<-marketOutcomes, x==mostProfit]
 
+marketUtility :: [EndMarket]
 marketUtility = [(EndParticipants x y z)|(EndParticipants x y z)<-marketOutcomes, y==mostUtility]
+
+currentbuyerinput = testbuyers
+currentsellerinput = testsellers
                               
 
 main :: IO() 
@@ -145,6 +208,5 @@ putStrLn ("Of these outcomes, the one(s) that generate(s) the most buyer utility
 putStrLn (show marketUtility)
 
 
---putStrLn ("Resulting Market Outcome: "++show outcome)
 
 
