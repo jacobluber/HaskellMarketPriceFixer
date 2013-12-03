@@ -1,4 +1,4 @@
-module Milestone2 where
+module Main where
 
 import TupleOps
 import DataType
