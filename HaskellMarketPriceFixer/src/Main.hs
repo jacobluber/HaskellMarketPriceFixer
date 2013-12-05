@@ -135,13 +135,15 @@ generateNewGoods transaction irrelevantRelevantSellerGoods =
 
 generateNewSellers :: MarketParticipant -> [Char] -> (t1, Offer, t2, Float) -> 
         [(String, Float, Float)] -> t -> [MarketParticipant] -> [MarketParticipant] 
-generateNewSellers relevantSeller newSellerIdent transaction irrelevantRelevantSellerGoods oldSellerMoney irrelevantSellers = 
+generateNewSellers relevantSeller newSellerIdent transaction irrelevantRelevantSellerGoods 
+        oldSellerMoney irrelevantSellers = 
  let oldSellerMoney = (\(Seller _ _ moneyHeld) -> moneyHeld) relevantSeller 
      newSeller = (Seller newSellerIdent (generateNewGoods transaction irrelevantRelevantSellerGoods) 
         (oldSellerMoney+(frTup(transaction)))) 
  in irrelevantSellers ++ [newSeller]
 
-recursivePriceFix :: (MarketParticipant, Offer, Offer, Float) -> [MarketParticipant] -> [MarketParticipant] -> Market -> EndMarket
+recursivePriceFix :: (MarketParticipant, Offer, Offer, Float) -> [MarketParticipant] ->
+        [MarketParticipant] -> Market -> EndMarket
 recursivePriceFix transaction sellers buyers result = 
  let newSellerIdent =  generateNewSellerIdent transaction
      relevantSeller = generateRelevantSeller sellers newSellerIdent 
