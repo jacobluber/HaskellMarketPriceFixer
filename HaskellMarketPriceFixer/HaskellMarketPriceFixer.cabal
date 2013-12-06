@@ -10,6 +10,7 @@ executable HaskellMarketPriceFixer
   build-depends:   base >= 4
   ghc-options:     -Wall
   other-modules:   
-                   PFixer,
-                   PriceMonads
-
+                   DataType,
+                   OldWork,
+                   TupleOps,
+                   Main
