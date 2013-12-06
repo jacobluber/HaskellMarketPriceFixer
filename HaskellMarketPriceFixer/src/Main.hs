@@ -17,7 +17,7 @@ currentbuyerinput = testbuyers
 currentsellerinput = testsellers
 pricemultiplier = 2
 
-sellerUtils :: [Offer] -> [Float]
+sellerUtils :: [Offer] -> [Utility]
 sellerUtils sellers = map (\(OfferInfo sellerInfo goodInfo) -> (frTup goodInfo)) sellers
 
 generateNewGood :: (Num t1, Num t2) => (String, t1, t2, t2) -> (String, t1, t2, t2)
@@ -189,31 +189,31 @@ generateFinalInputs sellerinput =
 sellerIds :: [Name]
 sellerIds = map sellerId currentsellerinput
 
-getGoods :: Num t => MarketParticipant -> [(String, Int, t)]
+getGoods :: Num t => MarketParticipant -> [(Good, Unit, t)]
 getGoods seller = map (\(goodId,unitsGood,pricePaidForGood) -> (goodId,unitsGood,-1)) (sellerGoodInfo seller)  
 
-sellervals :: Num t => [MarketParticipant] -> [[(String, Int, t)]]
+sellervals :: Num t => [MarketParticipant] -> [[(Good, Unit, t)]]
 sellervals sellers= map getGoods sellers
 
-input :: [[([Float], [(String, Int, Integer)])]]
+input :: [[([Float], [(Good, Unit, Integer)])]]
 input = map (\finalinputs -> zip finalinputs (sellervals currentsellerinput)) (generateFinalInputs currentsellerinput)
 
-createSellerGoods :: ([Float], [(String, Int, Integer)]) -> [(String,Int,Float)]
+createSellerGoods :: ([Float], [(Good, Unit, Integer)]) -> [(String,Int,Float)]
 createSellerGoods ([], _) = []
 createSellerGoods (_,[]) = []
 createSellerGoods (newprice:newprices, oldgood:oldgoods) = 
         [(fTup' oldgood,sTup' oldgood,newprice)] ++ createSellerGoods (newprices, oldgoods)
 
-createSellersGoods :: [[([Float], [(String, Int, Integer)])]] -> [[[(String, Int, Float)]]]
+createSellersGoods :: [[([Float], [(Good, Unit, Integer)])]] -> [[[(String, Int, Float)]]]
 createSellersGoods input = map (map createSellerGoods) input 
 
-almostSellers :: [[([Float], [(String, Int, Integer)])]] -> [[(String, [(String, Int, Float)])]]
+almostSellers :: [[([Float], [(Good, Unit, Integer)])]] -> [[(String, [(String, Int, Float)])]]
 almostSellers sellersgoodsinput = map (zip sellerIds) (createSellersGoods sellersgoodsinput) 
 
-createSeller :: (String, [(String, Int, Float)]) -> MarketParticipant
+createSeller :: (String, [(Good, Unit, Float)]) -> MarketParticipant
 createSeller (sellerId,goodInfo) = Seller sellerId goodInfo 0
 
-createSellers :: [[([Float], [(String, Int, Integer)])]] -> [[MarketParticipant]]
+createSellers :: [[([Float], [(Good, Unit, Integer)])]] -> [[MarketParticipant]]
 createSellers seller = map (map createSeller) (almostSellers seller) 
 
 marketOutcomes :: [EndMarket]

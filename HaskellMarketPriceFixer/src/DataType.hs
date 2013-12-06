@@ -3,9 +3,10 @@ type Name = String
 type Good = String
 type Money = Float
 type Utility = Float
-type Stock = (Good, Int, Money) 
-type Want = (Good, Int, Utility, Utility) 
-type OfferGood = (String, Int, Money, Utility)
+type Unit = Int
+type Stock = (Good, Unit, Money) 
+type Want = (Good, Unit, Utility, Utility) 
+type OfferGood = (String, Unit, Money, Utility)
 
 --data Seller = Seller  {sellerId :: String, stock:: [Stock], profit:: Money} deriving (Show, Eq)
 --data Buyer = Buyer {buyerId :: String, want  :: [Want],  budget:: Money, totalUtility:: Utility}
