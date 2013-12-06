@@ -185,10 +185,7 @@ generateFinalInputs sellerinput =
  let input = generateSellerInputs sellerinput
      result = sequence input 
  in result
-{-
-getIds :: MarketParticipant -> Name                                              
-getIds sellers = sellerId sellers
--}
+
 sellerIds :: [Name]
 sellerIds = map sellerId currentsellerinput
 

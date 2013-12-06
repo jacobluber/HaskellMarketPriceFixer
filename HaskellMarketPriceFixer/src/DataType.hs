@@ -3,8 +3,8 @@ type Name = String
 type Good = String
 type Money = Float
 type Utility = Float
-type Stock = (Good, Int, Money) -- Seller stock NEEDS to be an integer, even if you are using Floats for cost.
-type Want = (Good, Int, Utility, Utility) -- I"m assuming one of these floats is how much the buyer has purchased? 
+type Stock = (Good, Int, Money) 
+type Want = (Good, Int, Utility, Utility) 
 type OfferGood = (String, Int, Money, Utility)
 
 --data Seller = Seller  {sellerId :: String, stock:: [Stock], profit:: Money} deriving (Show, Eq)
