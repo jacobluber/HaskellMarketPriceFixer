@@ -1,14 +1,25 @@
 module DataType where
+type Name = String
+type Good = String
+type Money = Float
+type Utility = Float
+type Stock = (Good, Int, Money) -- Seller stock NEEDS to be an integer, even if you are using Floats for cost.
+type Want = (Good, Int, Utility, Utility) -- I"m assuming one of these floats is how much the buyer has purchased? 
+type OfferGood = (String, Int, Money, Utility)
+
+--data Seller = Seller  {sellerId :: String, stock:: [Stock], profit:: Money} deriving (Show, Eq)
+--data Buyer = Buyer {buyerId :: String, want  :: [Want],  budget:: Money, totalUtility:: Utility}
+--data Offer = Offer {seller :: String, good :: Good, quantity :: Int, price :: Money, utilityRatio :: Float}
 
 data MarketParticipant = Seller {
-        sellerId :: String, sellerGoodInfo :: [(String, Float, Float)], sellerMoney :: Float} 
-        | Buyer { buyerId :: String, buyerGoodInfo :: [(String, Float, Float, Float)], moneyHeld :: Float, accumulatedUtility :: Float} 
+        sellerId :: Name, sellerGoodInfo :: [Stock], sellerMoney :: Money} 
+        | Buyer { buyerId :: Name, buyerGoodInfo :: [Want], moneyHeld :: Money, accumulatedUtility :: Utility} 
         deriving (Show, Ord, Eq)
 data EndMarket = EndParticipants {
-        totalSellerProfit :: Float, totalBuyerUtility :: Float, participants :: [MarketParticipant]} 
+        totalSellerProfit :: Money, totalBuyerUtility :: Utility, participants :: [MarketParticipant]} 
         deriving (Show, Ord, Eq)
 data Market = Participants {marketParticipants :: [MarketParticipant]} | Empty deriving (Show, Ord, Eq)
-data Offer = OfferInfo {sellerInfo :: String, goodInfo :: (String, Float, Float, Float)} | NoSeller deriving (Show, Ord, Eq)
+data Offer = OfferInfo {sellerInfo :: String, goodInfo :: OfferGood} | NoSeller deriving (Show, Ord, Eq)
 
 testsellers = [Seller "A" [("a",4,1),("b",7,2),("c",5,3)] 0,
         Seller "B" [("a",1,3),("b",8,2),("c",2,1)] 0,
@@ -38,7 +49,7 @@ type Utility = Float
 type Quantity = Int
 type Inv {-short for inventory-} = (PName, Quantity, Price) 
 type Want = (PName, Utility)
-type PricingScheme = [(PName, Money)] -- store them separately, or create a different kind of seller for a seller with prices.
+type PricingScheme = [(PName, Money)] 
 data MarketParticipant = Seller Name [Inv] Money | Buyer Name [Want] Money Utility
 
 data Seller = S {sname :: Name, inventory :: [Inv], profit :: Money}

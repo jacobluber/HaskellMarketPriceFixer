@@ -32,15 +32,15 @@ generateTempInactiveSellers :: [Offer] -> [Offer]
 generateTempInactiveSellers sellers = [ offer | offer@(OfferInfo sellerId (_,_,_,upd)) <- sellers, 
         upd /= (maximum (sellerUtils sellers))]
 
-generateBuyerGood :: MarketParticipant -> Offer -> (String, Float, Float, Float)
+generateBuyerGood :: MarketParticipant -> Offer -> OfferGood
 generateBuyerGood buyer seller = head [ ret | ret@(goodID,_,_,_) <- (buyerGoodInfo buyer), 
         goodID == (fTup (goodInfo seller))]  
 
-generateBuyerGoods :: MarketParticipant -> Offer -> [(String, Float, Float, Float)]
+generateBuyerGoods :: MarketParticipant -> Offer -> [OfferGood]
 generateBuyerGoods buyer seller = [ ret | ret@(goodID,_,_,_) <- (buyerGoodInfo buyer), 
         goodID /= (fTup (goodInfo seller))]
 
-matchMarketParticipants :: [Offer] -> [Offer] -> MarketParticipant -> (MarketParticipant,Offer,Offer,Float)
+matchMarketParticipants :: [Offer] -> [Offer] -> MarketParticipant -> (MarketParticipant,Offer,Offer,Money)
 matchMarketParticipants sellersWithInventory dudSellers activeBuyer = 
  if sellersWithInventory == [] 
  then (activeBuyer, NoSeller, NoSeller, 0) 
@@ -75,13 +75,13 @@ generateEndMarket sellers result =
 generateUtilVals :: [(t, t1, b, t3)] -> [b]
 generateUtilVals = map tTup 
 
-generateSellerVals :: [MarketParticipant] -> [[(String, (String, Float, Float))]]
+generateSellerVals :: [MarketParticipant] -> [[(String, Stock)]]
 generateSellerVals = map (\(Seller sellerId goodInfo _) -> map (\goodInfo -> (sellerId,goodInfo)) goodInfo)
 
 generateOfferInput :: [a] -> [[b]] -> [(a, b)]
 generateOfferInput utils sellers = concat (map (\t -> zip utils t) sellers)
 
-generateOffers :: [(Float, (String, (String, Float, Float)))] -> [Offer]
+generateOffers :: [(Utility, (Name, Stock))] -> [Offer]
 generateOffers input = map (\(utility, (sellerId, (goodId, unitsGoodHeld,priceCharged))) -> 
         OfferInfo sellerId (goodId, unitsGoodHeld, priceCharged,utility/priceCharged)) input
 
@@ -107,34 +107,34 @@ makeTransaction utilValsInput sellers buyers =
      invalidOffers = generateInvalidOffers offers
  in matchMarketParticipants validOffers [] (head(buyers))
 
-generateNewSellerIdent :: (t, t1, Offer, t3) -> String     
+generateNewSellerIdent :: (t, t1, Offer, t3) -> Name     
 generateNewSellerIdent transaction = (\(OfferInfo sellerId (_,_,_,_)) -> sellerId) (tTup(transaction))
 
 generateRelevantSeller :: [MarketParticipant] -> String -> MarketParticipant
 generateRelevantSeller sellers newseller = head [ seller | seller@(Seller sellerId _ _) <- sellers, 
         sellerId == newseller] 
 
-generateIrrelevantSellers :: [MarketParticipant] -> String -> [MarketParticipant]
+generateIrrelevantSellers :: [MarketParticipant] -> Name -> [MarketParticipant]
 generateIrrelevantSellers sellers newseller = [ seller | seller@(Seller sellerId _ _) <- sellers, 
         sellerId /= newseller] 
 
-generateRelevantSellerGoods :: MarketParticipant -> [(String, Float, Float)]
+generateRelevantSellerGoods :: MarketParticipant -> [Stock]
 generateRelevantSellerGoods = (\(Seller sellerId goodInfo moneyHeld) -> goodInfo)
 
-generategoodIdent :: Offer -> (String, Float, Float)
+generategoodIdent :: Offer -> Stock
 generategoodIdent = (\(OfferInfo sellerId (goodId,unitsGood,price,_)) -> (goodId,unitsGood,price))
 
 generateIrrelevantRelevantSellerGoods :: Eq t => [t] -> t -> [t]
 generateIrrelevantRelevantSellerGoods relevantGood goodIdent = [good|good<-relevantGood,good /= goodIdent]
 
-generateNewGoods :: (t, Offer, t2, t3) -> [(String, Float, Float)] -> [(String, Float, Float)]
+generateNewGoods :: (t, Offer, t2, t3) -> [Stock] -> [Stock]
 generateNewGoods transaction irrelevantRelevantSellerGoods =
   let newGood = (\(OfferInfo sellerId (goodId,unitsGood,priceCharged,_))
         -> (goodId,unitsGood,priceCharged)) (sTup(transaction))
   in [newGood] ++ irrelevantRelevantSellerGoods 
 
-generateNewSellers :: MarketParticipant -> [Char] -> (t1, Offer, t2, Float) -> 
-        [(String, Float, Float)] -> t -> [MarketParticipant] -> [MarketParticipant] 
+generateNewSellers :: MarketParticipant -> [Char] -> (t1, Offer, t2, Float) ->
+        [Stock] -> t -> [MarketParticipant] -> [MarketParticipant] 
 generateNewSellers relevantSeller newSellerIdent transaction irrelevantRelevantSellerGoods 
         oldSellerMoney irrelevantSellers = 
  let oldSellerMoney = (\(Seller _ _ moneyHeld) -> moneyHeld) relevantSeller 
@@ -185,47 +185,47 @@ generateFinalInputs sellerinput =
  let input = generateSellerInputs sellerinput
      result = sequence input 
  in result
-
-getIds :: MarketParticipant -> String                                              
+{-
+getIds :: MarketParticipant -> Name                                              
 getIds sellers = sellerId sellers
+-}
+sellerIds :: [Name]
+sellerIds = map sellerId currentsellerinput
 
-sellerIds :: [String]
-sellerIds = map getIds currentsellerinput
-
-getGoods :: Num t => MarketParticipant -> [(String, Float, t)]
+getGoods :: Num t => MarketParticipant -> [(String, Int, t)]
 getGoods seller = map (\(goodId,unitsGood,pricePaidForGood) -> (goodId,unitsGood,-1)) (sellerGoodInfo seller)  
 
-sellervals :: Num t => [MarketParticipant] -> [[(String, Float, t)]]
+sellervals :: Num t => [MarketParticipant] -> [[(String, Int, t)]]
 sellervals sellers= map getGoods sellers
 
-input :: [[([Float], [(String, Float, Integer)])]]
+input :: [[([Float], [(String, Int, Integer)])]]
 input = map (\finalinputs -> zip finalinputs (sellervals currentsellerinput)) (generateFinalInputs currentsellerinput)
 
-createSellerGoods :: ([Float], [(String, Float, Integer)]) -> [(String,Float,Float)]
+createSellerGoods :: ([Float], [(String, Int, Integer)]) -> [(String,Int,Float)]
 createSellerGoods ([], _) = []
 createSellerGoods (_,[]) = []
 createSellerGoods (newprice:newprices, oldgood:oldgoods) = 
         [(fTup' oldgood,sTup' oldgood,newprice)] ++ createSellerGoods (newprices, oldgoods)
 
-createSellersGoods :: [[([Float], [(String, Float, Integer)])]] -> [[[(String, Float, Float)]]]
+createSellersGoods :: [[([Float], [(String, Int, Integer)])]] -> [[[(String, Int, Float)]]]
 createSellersGoods input = map (map createSellerGoods) input 
 
-almostSellers :: [[([Float], [(String, Float, Integer)])]] -> [[(String, [(String, Float, Float)])]]
+almostSellers :: [[([Float], [(String, Int, Integer)])]] -> [[(String, [(String, Int, Float)])]]
 almostSellers sellersgoodsinput = map (zip sellerIds) (createSellersGoods sellersgoodsinput) 
 
-createSeller :: (String, [(String, Float, Float)]) -> MarketParticipant
+createSeller :: (String, [(String, Int, Float)]) -> MarketParticipant
 createSeller (sellerId,goodInfo) = Seller sellerId goodInfo 0
 
-createSellers :: [[([Float], [(String, Float, Integer)])]] -> [[MarketParticipant]]
+createSellers :: [[([Float], [(String, Int, Integer)])]] -> [[MarketParticipant]]
 createSellers seller = map (map createSeller) (almostSellers seller) 
 
 marketOutcomes :: [EndMarket]
 marketOutcomes = map (\seller -> priceFix currentbuyerinput seller Empty) (createSellers input)
 
-mostProfit :: Float
+mostProfit :: Money
 mostProfit = maximum (map (\(EndParticipants totalSellerProfit _ _) -> totalSellerProfit) marketOutcomes)
 
-mostUtility :: Float
+mostUtility :: Utility
 mostUtility = maximum (map (\(EndParticipants _ totalBuyerUtility _) -> totalBuyerUtility) marketOutcomes)
 
 marketProfits :: [EndMarket]
@@ -246,7 +246,3 @@ putStrLn (show marketProfits)
 putStrLn (" ")
 putStrLn ("Of these outcomes, the one(s) that generate(s) the most buyer utility("++(show mostUtility)++") is/are: ")
 putStrLn (show marketUtility)
-
-
-
-
