@@ -14,4 +14,3 @@ executable HaskellMarketPriceFixer
                    OldWork,
                    TupleOps,
                    Main
-
