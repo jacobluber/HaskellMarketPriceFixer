@@ -28,6 +28,6 @@ Buyer BuyerStringIdentifier [(GoodIdentifier,UnitsOfGoodHeld,Utility,UtilityDecr
 EndMarket TotalSellerProfit TotalBuyerUtility [MarketParticipant]
 
 data Seller = Seller  {sellerId :: String, stock:: [Stock], profit:: Money} deriving (Show, Eq)
-data Buyer = Buyer {buyerId :: String, want  :: [Want],  budget:: Money, totalUtility:: Utility}
+data Buyer = Buyer {buyerId :: String, want  :: [Want],  budget:: Money, totalUtil:: Utility}
 data Offer = Offer {seller :: String, good :: Good, quantity :: Int, price :: Money, utilityRatio :: Float}
 -}
