@@ -1,4 +1,7 @@
-module TupleOps where
+module Helper where
+
+import DataTypes
+import TestCode
 
 fTup (x,_,_,_) = x
 sTup (_,x,_,_) = x
