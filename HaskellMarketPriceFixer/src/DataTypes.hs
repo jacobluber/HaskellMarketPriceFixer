@@ -7,10 +7,11 @@ type Good = String
 type Money = Float
 type Utility = Float
 type Unit = Int
-type Stock = (Good, Unit, Money) 
+type PreStock = (Good, Unit, Money)
+type Stock = (Good, Unit, Money, Money)  --Money here is cost.
 type Want = (Good, Unit, Utility, Utility) 
-type OfferGood = (String, Unit, Money, Utility)
-
+type OfferGood = (Good, Unit, Money, Utility) 
+data Vendor = Vendor Name [Stock]
 data MarketParticipant = 
         Seller { sellerId :: Name, sellerGoods :: [Stock], sellerProfit :: Money } 
         | Buyer { buyerId :: Name, buyerGoods :: [Want], moneyHeld :: Money, accUtil :: Utility } 
@@ -19,7 +20,7 @@ data EndMarket = EndParticipants {
         totalSellerProfit :: Money, totalBuyerUtil :: Utility, participants :: [MarketParticipant]} 
         deriving (Show, Ord, Eq)
 data Market = Participants {marketParticipants :: [MarketParticipant]} | Empty deriving (Show, Ord, Eq)
-data Offer = OfferInfo {sellerInfo :: String, goodInfo :: OfferGood} | NoOffer deriving (Show, Ord, Eq)
+data Offer = OfferInfo {sellerInfo :: Name, goodInfo :: OfferGood} | NoOffer deriving (Show, Ord, Eq)
 
 {-
 Offer SellerStringIdentifier (GoodIdentifier,UnitsOfGoodHeld,PriceChargedForGood,UtilityPerDollarForActiveBuyer) 

@@ -10,7 +10,5 @@ executable HaskellMarketPriceFixer
   build-depends:   base >= 4
   ghc-options:     -Wall
   other-modules:   
-                   DataType,
                    OldWork,
-                   TupleOps,
-                   Main
+                   RandomM
